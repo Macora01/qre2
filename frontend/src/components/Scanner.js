@@ -90,7 +90,9 @@ function Scanner() {
             showTorchButtonIfSupported: true,
             videoConstraints: {
               facingMode: { ideal: "environment" } // Prefer back camera
-            }
+            },
+            // IMPORTANT: Only show camera option, not file upload
+            supportedScanTypes: [1] // 1 = camera only, 0 = file only
           },
           false
         );
