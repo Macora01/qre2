@@ -53,130 +53,119 @@ function Scanner() {
   }, []);
 
   useEffect(() => {
-    // Initialize barcode scanner
+    // Initialize barcode scanner with direct video stream
     const initScanner = async () => {
-      if (html5QrcodeScannerRef.current) {
+      if (html5QrcodeRef.current) {
         return; // Already initialized
       }
 
       try {
-        const scanner = new Html5QrcodeScanner(
-          "reader",
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-            // Support all barcode formats
-            formatsToSupport: [
-              0, // QR_CODE
-              1, // AZTEC
-              2, // CODABAR
-              3, // CODE_39
-              4, // CODE_93
-              5, // CODE_128
-              6, // DATA_MATRIX
-              7, // MAXICODE
-              8, // ITF
-              9, // EAN_13
-              10, // EAN_8
-              11, // PDF_417
-              12, // RSS_14
-              13, // RSS_EXPANDED
-              14, // UPC_A
-              15, // UPC_E
-              16, // UPC_EAN_EXTENSION
-            ],
-            rememberLastUsedCamera: true,
-            aspectRatio: 1.0,
-            showTorchButtonIfSupported: true,
-            videoConstraints: {
-              facingMode: { ideal: "environment" } // Prefer back camera
-            },
-            // IMPORTANT: Only show camera option, not file upload
-            supportedScanTypes: [1] // 1 = camera only, 0 = file only
-          },
-          false
-        );
+        const html5QrCode = new Html5Qrcode("reader");
+        html5QrcodeRef.current = html5QrCode;
 
-        html5QrcodeScannerRef.current = scanner;
+        // Configuration for continuous scanning
+        const config = {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
+          // Support all barcode formats
+          formatsToSupport: [
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+          ]
+        };
 
-        scanner.render(
-          async (decodedText, decodedResult) => {
-            if (isScanning) return; // Prevent multiple scans at once
-            setIsScanning(true);
+        // Callback when barcode is detected
+        const qrCodeSuccessCallback = async (decodedText, decodedResult) => {
+          if (isScanning) return; // Prevent multiple scans
+          setIsScanning(true);
 
-            try {
-              // Save barcode to backend
-              const response = await fetch(`${API}/barcode`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json'
-                },
-                credentials: 'include',
-                body: JSON.stringify({ barcode: decodedText })
-              });
+          try {
+            // Save barcode to backend
+            const response = await fetch(`${API}/barcode`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              credentials: 'include',
+              body: JSON.stringify({ barcode: decodedText })
+            });
 
-              if (response.ok) {
-                const data = await response.json();
-                setCounter(data.barcode_count);
-                setLastScannedCode(decodedText);
-                setNextEnabled(true);
+            if (response.ok) {
+              const data = await response.json();
+              setCounter(data.barcode_count);
+              setLastScannedCode(decodedText);
+              setNextEnabled(true);
 
-                if (data.is_duplicate) {
-                  setAlert({
-                    type: 'warning',
-                    message: `⚠️ Código duplicado: ${decodedText}. Se ha guardado de todos modos.`
-                  });
-                } else {
-                  setAlert({
-                    type: 'success',
-                    message: `✅ Código escaneado: ${decodedText}`
-                  });
-                }
-
-                // Clear alert after 3 seconds
-                setTimeout(() => setAlert(null), 3000);
-              } else {
+              if (data.is_duplicate) {
                 setAlert({
                   type: 'warning',
-                  message: '❌ Error al guardar el código'
+                  message: `⚠️ Código duplicado: ${decodedText}. Se ha guardado de todos modos.`
+                });
+              } else {
+                setAlert({
+                  type: 'success',
+                  message: `✅ Código escaneado: ${decodedText}`
                 });
               }
-            } catch (error) {
-              console.error('Error saving barcode:', error);
+
+              setTimeout(() => setAlert(null), 3000);
+            } else {
               setAlert({
                 type: 'warning',
-                message: '❌ Error de conexión'
+                message: '❌ Error al guardar el código'
               });
-            } finally {
-              setIsScanning(false);
             }
-          },
+          } catch (error) {
+            console.error('Error saving barcode:', error);
+            setAlert({
+              type: 'warning',
+              message: '❌ Error de conexión'
+            });
+          } finally {
+            setTimeout(() => setIsScanning(false), 1000);
+          }
+        };
+
+        // Start camera with back camera preference
+        const constraints = {
+          facingMode: { ideal: "environment" } // Back camera
+        };
+
+        await html5QrCode.start(
+          constraints,
+          config,
+          qrCodeSuccessCallback,
           (errorMessage) => {
-            // Ignore scanning errors (too frequent)
+            // Ignore continuous scanning errors
           }
         );
+
+        setIsScannerReady(true);
+        console.log("✅ Scanner started successfully");
+
       } catch (error) {
-        console.error('Error initializing scanner:', error);
+        console.error('Error starting scanner:', error);
         setAlert({
           type: 'warning',
-          message: '❌ Error al inicializar el escáner. Recarga la página.'
+          message: '❌ Error al iniciar la cámara. Verifica los permisos.'
         });
       }
     };
 
-    // Delay initialization to ensure DOM is ready
     const timer = setTimeout(() => {
       initScanner();
     }, 500);
 
     return () => {
       clearTimeout(timer);
-      if (html5QrcodeScannerRef.current) {
-        html5QrcodeScannerRef.current.clear().catch(console.error);
-        html5QrcodeScannerRef.current = null;
+      if (html5QrcodeRef.current) {
+        html5QrcodeRef.current.stop().then(() => {
+          html5QrcodeRef.current.clear();
+          html5QrcodeRef.current = null;
+        }).catch(console.error);
       }
     };
-  }, []); // Empty dependency array - run once on mount
+  }, []);
 
   const handleNext = () => {
     setNextEnabled(false);
