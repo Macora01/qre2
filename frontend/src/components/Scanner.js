@@ -150,7 +150,16 @@ function Scanner() {
           // Advanced configuration with autofocus for iOS
           const advancedConfig = {
             fps: 5, // Reduced FPS for better processing
-            qrbox: { width: 300, height: 300 }, // Larger scan box
+            qrbox: function(viewfinderWidth, viewfinderHeight) {
+              // For barcodes: wider rectangle (better for linear codes)
+              let minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+              let qrboxWidth = minEdge * 0.8; // 80% of width
+              let qrboxHeight = minEdge * 0.4; // 40% of height (wider rectangle)
+              return {
+                width: qrboxWidth,
+                height: qrboxHeight
+              };
+            },
             aspectRatio: 1.0,
             // Support all barcode formats
             formatsToSupport: [
@@ -353,8 +362,11 @@ function Scanner() {
             borderRadius: '8px',
             marginTop: '12px'
           }}>
-            <strong>💡 Consejo:</strong> Mantén el código a 15-25 cm de distancia. 
-            Espera 1-2 segundos para que enfoque.
+            <strong>💡 Para códigos de barras:</strong><br/>
+            • Mantén a 15-20 cm de distancia<br/>
+            • Alinea horizontalmente dentro del rectángulo<br/>
+            • Espera 2-3 segundos para que enfoque<br/>
+            • Buena iluminación es clave
           </div>
         )}
       </div>
