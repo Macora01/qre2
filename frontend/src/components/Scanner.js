@@ -147,10 +147,34 @@ function Scanner() {
             cameraId = cameras[cameras.length - 1].id;
           }
 
+          // Advanced configuration with autofocus for iOS
+          const advancedConfig = {
+            fps: 5, // Reduced FPS for better processing
+            qrbox: { width: 300, height: 300 }, // Larger scan box
+            aspectRatio: 1.0,
+            // Support all barcode formats
+            formatsToSupport: [
+              0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+            ],
+            // Advanced camera settings for iOS
+            videoConstraints: {
+              facingMode: "environment",
+              focusMode: "continuous", // Continuous autofocus
+              advanced: [
+                { focusMode: "continuous" },
+                { focusDistance: 0.5 }
+              ]
+            },
+            // Experimental features
+            experimentalFeatures: {
+              useBarCodeDetectorIfSupported: true
+            }
+          };
+
           // Start scanning with selected camera
           await html5QrCode.start(
             cameraId,
-            config,
+            advancedConfig,
             qrCodeSuccessCallback,
             (errorMessage) => {
               // Ignore continuous scanning errors
@@ -317,6 +341,20 @@ function Scanner() {
           }}>
             <p>📷 Inicializando escáner...</p>
             <p>Permite el acceso a la cámara cuando se solicite</p>
+          </div>
+        )}
+        {isScannerReady && (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '16px', 
+            color: 'var(--text-color)',
+            fontSize: '13px',
+            backgroundColor: 'var(--accent-color)',
+            borderRadius: '8px',
+            marginTop: '12px'
+          }}>
+            <strong>💡 Consejo:</strong> Mantén el código a 15-25 cm de distancia. 
+            Espera 1-2 segundos para que enfoque.
           </div>
         )}
       </div>
