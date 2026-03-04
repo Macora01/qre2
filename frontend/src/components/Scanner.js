@@ -18,6 +18,27 @@ function Scanner() {
   const html5QrcodeRef = useRef(null);
   const lastScannedCodeRef = useRef(null);
   const lastScanTimeRef = useRef(0);
+  const audioCtxRef = useRef(null);
+
+  // Unlock audio on first user touch (required by mobile browsers)
+  useEffect(() => {
+    const unlock = () => {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume();
+      }
+      document.removeEventListener('touchstart', unlock);
+      document.removeEventListener('click', unlock);
+    };
+    document.addEventListener('touchstart', unlock, { once: true });
+    document.addEventListener('click', unlock, { once: true });
+    return () => {
+      document.removeEventListener('touchstart', unlock);
+      document.removeEventListener('click', unlock);
+    };
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("qre_token");
@@ -119,17 +140,20 @@ function Scanner() {
 
               // Vibración + sonido al escanear correctamente
               if (navigator.vibrate) navigator.vibrate(200);
-              try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.frequency.value = 1200;
-                gain.gain.value = 0.3;
-                osc.start();
-                osc.stop(ctx.currentTime + 0.15);
-              } catch (e) {}
+              if (audioCtxRef.current) {
+                try {
+                  const ctx = audioCtxRef.current;
+                  if (ctx.state === 'suspended') await ctx.resume();
+                  const osc = ctx.createOscillator();
+                  const gain = ctx.createGain();
+                  osc.connect(gain);
+                  gain.connect(ctx.destination);
+                  osc.frequency.value = 1200;
+                  gain.gain.value = 0.3;
+                  osc.start();
+                  osc.stop(ctx.currentTime + 0.15);
+                } catch (e) {}
+              }
 
               if (data.is_duplicate) {
                 setAlert({
