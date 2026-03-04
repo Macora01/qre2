@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: qre-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: qre_production
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - qre-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # QRE Application (React + FastAPI)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: qre-app
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      # Backend Environment Variables
+      MONGO_URL: mongodb://mongodb:27017
+      DB_NAME: qre_production
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://qre.facore.cloud}
+      
+      # Frontend Environment Variables (used during build)
+      REACT_APP_BACKEND_URL: ${REACT_APP_BACKEND_URL:-https://qre.facore.cloud}
+      WDS_SOCKET_PORT: 443
+      ENABLE_HEALTH_CHECK: false
+      
+      # Python
+      PYTHONUNBUFFERED: 1
+    volumes:
+      # Persistent CSV data storage
+      - csv-data:/app/data
+    networks:
+      - qre-network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/api/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  qre-network:
+    driver: bridge
+
+volumes:
+  mongodb-data:
+    driver: local
+  csv-data:
+    driver: local
