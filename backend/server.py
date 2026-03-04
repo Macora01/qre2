@@ -190,7 +190,7 @@ async def email_login(body: EmailLoginRequest, response: Response):
         value=session_token,
         httponly=True,
         secure=True,
-        samesite="none",
+        samesite="lax",
         path="/",
         max_age=30 * 24 * 60 * 60
     )
@@ -225,7 +225,7 @@ async def logout(request: Request, response: Response):
             key="session_token",
             path="/",
             secure=True,
-            samesite="none"
+            samesite="lax"
         )
         
         return {"message": "Logged out successfully"}
