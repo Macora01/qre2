@@ -1,17 +1,5 @@
-# Core FastAPI dependencies
 fastapi==0.110.1
 uvicorn[standard]==0.25.0
 python-dotenv==1.2.1
 python-multipart==0.0.22
-
-# MongoDB
-motor==3.3.1
-pymongo==4.5.0
-
-# Data validation
 pydantic==2.12.5
-pydantic_core==2.41.5
-email-validator==2.3.0
-
-# Type checking
-typing_extensions==4.15.0
