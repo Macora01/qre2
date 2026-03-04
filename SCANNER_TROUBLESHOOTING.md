@@ -14,7 +14,7 @@ He actualizado el componente Scanner con:
 ## 📱 Cómo Debería Funcionar:
 
 ### Paso 1: Login
-1. Abrir: `https://estoy-aqui.preview.emergentagent.com`
+1. Abrir: `https://scan-deploy-1.preview.emergentagent.com`
 2. Click en "Iniciar sesión con Google"
 3. Autorizar con tu cuenta de Google
 

@@ -8,7 +8,7 @@ import subprocess
 class BarcodeAppTester:
     def __init__(self):
         # Use the public URL from frontend .env
-        self.base_url = "https://estoy-aqui.preview.emergentagent.com"
+        self.base_url = "https://scan-deploy-1.preview.emergentagent.com"
         self.api_url = f"{self.base_url}/api"
         self.session_token = None
         self.user_id = None
