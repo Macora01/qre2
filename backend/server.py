@@ -162,19 +162,17 @@ async def finalize_session(request: Request):
 
     session = scan_sessions[email]
 
-    # Generate CSV
+    # One CSV per user per day - append if exists
     today = datetime.now(timezone.utc).strftime("%Y%m%d")
-    version = 1
-    while True:
-        csv_filename = f"barras_{today}_v{version}.csv"
-        csv_path = DATA_DIR / csv_filename
-        if not csv_path.exists():
-            break
-        version += 1
+    safe_email = email.replace("@", "_").replace(".", "_")
+    csv_filename = f"barras_{safe_email}_{today}.csv"
+    csv_path = DATA_DIR / csv_filename
 
-    with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:
+    file_exists = csv_path.exists()
+    with open(csv_path, 'a', newline='', encoding='utf-8') as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(['timestamp', 'codigo', 'usuario'])
+        if not file_exists:
+            writer.writerow(['timestamp', 'codigo', 'usuario'])
         for entry in session["codes"]:
             writer.writerow([
                 entry["timestamp"].strftime("%Y-%m-%d %H:%M:%S"),

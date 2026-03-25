@@ -9,6 +9,7 @@ function Scanner() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [counter, setCounter] = useState(0);
+  const [recentCodes, setRecentCodes] = useState([]);
   const [lastScannedCode, setLastScannedCode] = useState(null);
   const [alert, setAlert] = useState(null);
   const [nextEnabled, setNextEnabled] = useState(false);
@@ -117,6 +118,10 @@ function Scanner() {
               setCounter(data.barcode_count);
               setLastScannedCode(decodedText);
               setNextEnabled(true);
+              setRecentCodes(prev => [
+                { code: decodedText, time: new Date().toLocaleTimeString(), dup: data.is_duplicate },
+                ...prev
+              ]);
 
               // Vibración + sonido al escanear correctamente
               if (navigator.vibrate) navigator.vibrate(200);
@@ -415,6 +420,37 @@ function Scanner() {
           </div>
         )}
       </div>
+
+      {recentCodes.length > 0 && (
+        <div data-testid="recent-codes-box" style={{
+          margin: '12px 16px',
+          padding: '12px',
+          backgroundColor: 'var(--white)',
+          borderRadius: '8px',
+          border: '1px solid var(--accent-color)',
+          maxHeight: '180px',
+          overflowY: 'auto'
+        }}>
+          <div style={{ fontWeight: 'bold', color: 'var(--primary-color)', marginBottom: '8px', fontSize: '14px' }}>
+            Últimos registros
+          </div>
+          {recentCodes.map((item, i) => (
+            <div key={i} style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              padding: '6px 0',
+              borderBottom: i < recentCodes.length - 1 ? '1px solid var(--accent-color)' : 'none',
+              fontSize: '13px',
+              color: item.dup ? 'var(--error-color)' : 'var(--text-color)'
+            }}>
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: '8px' }}>
+                {item.code}
+              </span>
+              <span style={{ color: 'var(--text-light)', flexShrink: 0 }}>{item.time}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="bottom-buttons">
         <button
