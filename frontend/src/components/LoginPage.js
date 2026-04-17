@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { unlockBeep } from "../lib/beep";
+import { APP_VERSION } from "../version";
 
 const API = (process.env.REACT_APP_BACKEND_URL || "") + "/api";
 
@@ -111,6 +112,9 @@ function LoginPage() {
             {loading ? "Ingresando..." : "Entrar"}
           </button>
         </form>
+        <div style={{ marginTop: '24px', fontSize: '11px', color: 'var(--text-light)', textAlign: 'center' }} data-testid="app-version">
+          v{APP_VERSION}
+        </div>
       </div>
     </div>
   );
