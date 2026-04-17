@@ -32,11 +32,20 @@ sessions = {}       # session_token -> {user_id, email, expires_at}
 scan_sessions = {}  # user_email -> {codes: [{barcode, timestamp}], session_id}
 
 # ============================================================================
+# ADMIN CONFIG
+# ============================================================================
+ADMIN_USERS = {
+    "maroto1409@gmail.com": "Facora2026..",
+    "ventas@boaideia.cl": "Facora2026.."
+}
+
+# ============================================================================
 # MODELS
 # ============================================================================
 
 class EmailLoginRequest(BaseModel):
     email: str
+    password: str = ""
 
 class BarcodeSubmit(BaseModel):
     barcode: str
@@ -80,24 +89,34 @@ async def email_login(body: EmailLoginRequest):
     if not EMAIL_REGEX.match(email):
         raise HTTPException(status_code=400, detail="Formato de correo inválido")
 
+    is_admin = False
+    if email in ADMIN_USERS:
+        if not body.password:
+            return {"needs_password": True}
+        if body.password != ADMIN_USERS[email]:
+            raise HTTPException(status_code=400, detail="Contraseña incorrecta")
+        is_admin = True
+
     token = uuid.uuid4().hex
     sessions[token] = {
         "user_id": f"user_{uuid.uuid4().hex[:8]}",
         "email": email,
         "name": email.split("@")[0],
+        "is_admin": is_admin,
         "expires_at": datetime.now(timezone.utc) + timedelta(days=30)
     }
 
     return {
         "email": email,
         "name": email.split("@")[0],
-        "session_token": token
+        "session_token": token,
+        "is_admin": is_admin
     }
 
 @api_router.get("/auth/me")
 async def get_me(request: Request):
     user = get_current_user(request)
-    return {"email": user["email"], "name": user["name"]}
+    return {"email": user["email"], "name": user["name"], "is_admin": user.get("is_admin", False)}
 
 @api_router.post("/auth/logout")
 async def logout(request: Request):
@@ -185,6 +204,38 @@ async def finalize_session(request: Request):
 
     logger.info(f"CSV created: {csv_filename} with {count} entries")
     return {"message": "Sesión finalizada", "csv_filename": csv_filename, "barcode_count": count}
+
+# ============================================================================
+# ADMIN - CSV DOWNLOAD ROUTES
+# ============================================================================
+
+@api_router.get("/admin/csv-list")
+async def list_csv_files(request: Request):
+    user = get_current_user(request)
+    if not user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Acceso denegado")
+
+    files = []
+    for f in sorted(DATA_DIR.glob("barras_*.csv"), reverse=True):
+        stat = f.stat()
+        files.append({
+            "filename": f.name,
+            "size_kb": round(stat.st_size / 1024, 1),
+            "modified": datetime.fromtimestamp(stat.st_mtime, timezone.utc).strftime("%Y-%m-%d %H:%M")
+        })
+    return {"files": files}
+
+@api_router.get("/admin/csv-download/{filename}")
+async def download_csv(filename: str, request: Request):
+    user = get_current_user(request)
+    if not user.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Acceso denegado")
+
+    csv_path = DATA_DIR / filename
+    if not csv_path.exists() or not filename.startswith("barras_") or not filename.endswith(".csv"):
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+
+    return FileResponse(csv_path, media_type="text/csv", filename=filename)
 
 # ============================================================================
 # BASIC

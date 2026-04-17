@@ -257,7 +257,9 @@ function Scanner() {
         html5QrcodeRef.current.stop().then(() => {
           html5QrcodeRef.current.clear();
           html5QrcodeRef.current = null;
-        }).catch(console.error);
+        }).catch(() => {
+          html5QrcodeRef.current = null;
+        });
       }
     };
   }, []);
@@ -459,15 +461,25 @@ function Scanner() {
           onClick={handleNext}
           data-testid="next-button"
         >
-          ➡️ Próximo
+          Próximo
         </button>
         <button
           className="btn btn-danger"
           onClick={handleFinalize}
           data-testid="finalize-button"
         >
-          ✓ Finalizar
+          Finalizar
         </button>
+        {localStorage.getItem("qre_admin") === "1" && (
+          <button
+            className="btn btn-primary"
+            onClick={() => navigate("/downloads")}
+            data-testid="downloads-button"
+            style={{ backgroundColor: "var(--text-color)" }}
+          >
+            Descargas
+          </button>
+        )}
       </div>
 
       {showFinalizeModal && (

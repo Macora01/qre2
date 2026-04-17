@@ -7,6 +7,8 @@ const API = (process.env.REACT_APP_BACKEND_URL || "") + "/api";
 function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [needsPassword, setNeedsPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -42,14 +44,21 @@ function LoginPage() {
       const response = await fetch(`${API}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: trimmed }),
+        body: JSON.stringify({ email: trimmed, password }),
       });
 
       if (response.ok) {
         const data = await response.json();
-        localStorage.setItem("qre_email", trimmed);
-        localStorage.setItem("qre_token", data.session_token);
-        navigate("/scanner", { replace: true });
+        if (data.needs_password) {
+          setNeedsPassword(true);
+          setError("Ingresa tu contraseña");
+        } else if (data.session_token) {
+          localStorage.setItem("qre_email", trimmed);
+          localStorage.setItem("qre_token", data.session_token);
+          if (data.is_admin) localStorage.setItem("qre_admin", "1");
+          else localStorage.removeItem("qre_admin");
+          navigate("/scanner", { replace: true });
+        }
       } else {
         const data = await response.json();
         setError(data.detail || "Error al iniciar sesión");
@@ -81,11 +90,22 @@ function LoginPage() {
             className="login-input"
             placeholder="tu@correo.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => { setEmail(e.target.value); setNeedsPassword(false); setPassword(""); }}
             autoComplete="email"
             autoFocus
             data-testid="email-input"
           />
+          {needsPassword && (
+            <input
+              type="password"
+              className="login-input"
+              placeholder="Contraseña"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoFocus
+              data-testid="password-input"
+            />
+          )}
           {error && <div className="login-error" data-testid="login-error">{error}</div>}
           <button type="submit" className="login-button" disabled={loading} data-testid="login-button">
             {loading ? "Ingresando..." : "Entrar"}
